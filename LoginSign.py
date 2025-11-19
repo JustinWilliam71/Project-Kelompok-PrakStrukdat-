@@ -1,142 +1,88 @@
 import streamlit as st
+import time 
+from database import make_hashes, login_user_db, register_user
 
-if 'page_state' not in st.session_state:
-    st.session_state.page_state = 'login'
-
-st.markdown("""
-    <style>
-    .form_submit_button {
-        background-color: green;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-
-def login_page_pure_python():
+def auth_page():
     """
-    Menampilkan halaman login GetCareer.
+    Menampilkan halaman login dan registrasi menggunakan mode vertikal dan session state.
     """
-    
-    st.set_page_config(
-        page_title="GetCareer - Masuk",
-        layout="centered",
-        initial_sidebar_state="collapsed"
-    )
-
-    st.title("Get:green[Career]") 
-    st.subheader("Temukan peluang karir Anda berikutnya.")
-    st.divider()
-
-    if st.session_state.page_state == 'login':
-        display_login_form()
-    elif st.session_state.page_state == 'forgot_password':
-        display_forgot_password_form()
-    elif st.session_state.page_state == 'sign_in':
-        sign_in()
-
-def display_login_form():
-    """
-    Menampilkan formulir login dan tombol Lupa Kata Sandi.
-    """
-    
-    with st.container(border=False):
-        st.header("Masuk ke Akun Anda")
-
-        with st.form(key='login_form'):
-            
-            credential = st.text_input(
-                "Email/Username", 
-                placeholder="Masukkan alamat email atau username Anda"
-            )
-
-            password = st.text_input(
-                "Kata Sandi", 
-                type="password", 
-                placeholder="Masukkan kata sandi"
-            )
-            
-            login_button = st.form_submit_button(
-                "Masuk ke Akun", 
-                type="primary",
-                use_container_width=True
-            ) 
-
-            if login_button:
-                if (credential.lower() == "admin" or credential.lower() == "user@example.com") and password == "12345":
-                    st.success("Login Berhasil! Selamat datang.")
-                    st.balloons()
-                else:
-                    st.error("Email/Username atau Kata Sandi salah.")
-
-    st.divider()
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("Lupa Kata Sandi?", key="forgot_pass_btn"):
-            st.session_state.page_state = 'forgot_password'
-            st.rerun()
-
-    with col2:
-        if st.button("Daftar Akun Baru", key="signup_btn"):
-            st.session_state.page_state = 'sign_in'
-            st.rerun()
-
-
-def display_forgot_password_form():
-    """
-    Menampilkan formulir untuk fitur Forgot Password.
-    """
-    st.header("Lupa Kata Sandi")
-    
-    with st.container(border=True):
-        st.write("Masukkan email yang terdaftar untuk menerima tautan reset kata sandi.")
+    c1, c2, c3 = st.columns([1, 2, 1])
+    with c2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("""
+        <div class="centered-content">
+            <span class="big-icon">💼</span> 
+            <h1 style='color:#00B14F; text-align: center;'>Getcareer</h1>
+            <p style='text-align: center;'>Bangun Masa Depan Kariermu Di Sini</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        with st.form(key='forgot_password_form'):
-            reset_email = st.text_input(
-                "Email Terdaftar", 
-                placeholder="misalnya: user@example.com"
-            )
-            
-            send_link_button = st.form_submit_button(
-                "Kirim Tautan Reset", 
-                type="primary", 
-                use_container_width=True
-            )
-            
-            if send_link_button:
-                if "@" in reset_email and "." in reset_email:
-                    st.success(f"Tautan reset telah dikirim ke **{reset_email}**. Cek email Anda!")
-                else:
-                    st.error("Masukkan alamat email yang valid.")
+        with st.container(border=True):
+            # --- LOGIN ---
+            if st.session_state['auth_mode'] == 'login':
+                st.subheader("🔑 Masuk Akun")
+                with st.form("login_form"):
+                    username = st.text_input("Username")
+                    password = st.text_input("Password", type='password')
+                    submitted = st.form_submit_button("Masuk 🚀")
 
-        st.divider()
-        if st.button("⬅Kembali ke Halaman Login", key='back_to_login_btn'):
-            st.session_state.page_state = 'login'
-            st.rerun()
+                    if submitted:
+                        hashed_pswd = make_hashes(password)
+                        result = login_user_db(username, hashed_pswd)
+                        
+                        if result:
+                            st.session_state['logged_in'] = True
+                            st.session_state['username'] = username
+                            st.session_state['user_role'] = result[0][3] # role
+                            st.success("Login Berhasil!")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error("Username atau Password salah")
 
-def sign_in():
-    """
-    Menampilkan halaman Sign In/Login untuk aplikasi GetCareer.
-    """
-    
-    st.title("Sign Up") 
-    
-    with st.form(key='login_form'):
-        username = st.text_input("Username", placeholder="Masukkan Username Anda")
-        
-        password = st.text_input("Password", type="password", placeholder="Masukkan Password Anda")
-        
-        sign_in_button = st.form_submit_button("Sign Up")
+                st.markdown("---")
+                col_text, col_btn = st.columns([2,1])
+                with col_text: st.write("Belum punya akun?")
+                with col_btn:
+                    if st.button("Daftar"):
+                        st.session_state['auth_mode'] = 'register'
+                        st.rerun()
 
-        # if sign_in_button:
-        #     if username == "admin" and password == "adminpass":
-        #         st.success("Login Berhasil! Selamat datang admin.")
-        #     else:
-        #         st.error("Username atau Password salah.")
-    if st.button("⬅Kembali ke Halaman Login", key='back_to_login_btn'):
-        st.session_state.page_state = 'login'
-        st.rerun()
-    st.markdown("---") 
+            # --- REGISTER ---
+            elif st.session_state['auth_mode'] == 'register':
+                st.subheader("📝 Buat Akun Baru")
+                st.info("Lengkapi data berikut untuk mendaftar.")
+                
+                with st.form("register_form"):
+                    new_user = st.text_input("Username *", placeholder="Buat username unik")
+                    new_email = st.text_input("Alamat E-mail *", placeholder="contoh@email.com")
+                    new_password = st.text_input("Password *", type='password')
+                    confirm_password = st.text_input("Retype Password *", type='password')
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    submitted = st.form_submit_button("Daftar Sekarang 🤝")
 
-if __name__ == "__main__":
-    login_page_pure_python()
+                    if submitted:
+                        # Validasi
+                        if not new_user or not new_email or not new_password:
+                            st.warning("⚠️ Semua kolom bertanda (*) wajib diisi.")
+                        elif new_password != confirm_password:
+                            st.error("❌ Password tidak sama!")
+                        elif len(new_password) < 4:
+                            st.warning("⚠️ Password minimal 4 karakter.")
+                        elif "@" not in new_email:
+                            st.warning("⚠️ Format E-mail tidak valid.")
+                        else:
+                            hashed_pw = make_hashes(new_password)
+                            if register_user(new_user, new_email, hashed_pw):
+                                st.success("✅ Akun berhasil dibuat! Silakan Login.")
+                                time.sleep(1.5)
+                                st.session_state['auth_mode'] = 'login' 
+                                st.rerun()
+                            else:
+                                st.error("❌ Username sudah digunakan. Atau E-mail sudah terdaftar.")
+                
+                st.markdown("---")
+                if st.button("Kembali ke Login"):
+                    st.session_state['auth_mode'] = 'login'
+                    st.rerun()
