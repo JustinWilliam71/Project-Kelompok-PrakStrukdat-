@@ -2,18 +2,15 @@ import streamlit as st
 import pandas as pd
 import random
 from datetime import datetime, timedelta
-import math # <--- Tambahkan ini untuk perhitungan pagination
-# Import semua fungsi dari file terpisah
 from database import get_db_connection
-from Sign_In import auth_page
+from LoginSign import auth_page
 from beranda import home_page
-from cari_kerja import search_jobs_page
+from pencarian import search_jobs_page
 from profile import profile_page
+from map import map
+from ai import ai_consultation_page
 
 
-# ==========================================
-# 1. KONFIGURASI APLIKASI & CSS
-# ==========================================
 st.set_page_config(
     page_title="Getcareer - Platform Karier Terbaik",
     page_icon="💼",
@@ -50,10 +47,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# ==========================================
-# 2. SESSION STATE
-# ==========================================
 def init_session_state():
     defaults = {
         'logged_in': False,
@@ -62,8 +55,7 @@ def init_session_state():
         'auth_mode': 'login', 
         'current_page': 'Home',
         'profile_pic_preview': None,
-        # --- TAMBAHKAN INI ---
-        'search_page': 1 # Halaman awal untuk pencarian
+        'search_page': 1
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -71,9 +63,6 @@ def init_session_state():
 
 init_session_state()
 
-# ==========================================
-# 3. GENERATOR DATA DUMMY
-# ==========================================
 @st.cache_data
 def get_jobs():
     """Menghasilkan DataFrame data lowongan kerja dummy."""
@@ -94,15 +83,11 @@ def get_jobs():
     return pd.DataFrame(data)
 
 
-# ==========================================
-# 4. NAVIGASI UTAMA
-# ==========================================
 def main():
     """Fungsi utama yang mengontrol alur aplikasi."""
     if st.session_state['logged_in']:
-        st.sidebar.title("Menu Navigasi")
+        st.sidebar.title("Menu")
         
-        # --- MODE ADMIN ---
         if st.session_state['user_role'] == 'admin':
             st.sidebar.warning("🔧 Mode Admin")
             page = st.sidebar.selectbox("Pilih Halaman", ["Beranda", "Database User"])
@@ -113,33 +98,32 @@ def main():
                 st.title("Database Pengguna")
                 st.dataframe(pd.read_sql("SELECT * FROM userdata", get_db_connection()), use_container_width=True)
                 
-        # --- MODE USER BIASA ---
         else:
-            menu_dict = {"Home": "🏠 Beranda", "SearchJobs": "🔍 Cari Kerja", "Profile": "👤 Profil Saya"}
+            menu_dict = {"Home": "Beranda", "SearchJobs": "Cari Kerja", "Profile": "Profile", "MapJobs": "Map", "AIConsult": "Konsultasi AI"}
             selected = st.sidebar.radio("Ke Halaman:", list(menu_dict.keys()), format_func=lambda x: menu_dict[x])
             st.session_state['current_page'] = selected
             st.sidebar.markdown("---")
             
-            if st.sidebar.button("🚪 Keluar Aplikasi"):
+            if st.sidebar.button("Keluar"):
                 st.session_state['logged_in'] = False
                 st.session_state['current_page'] = 'Home'
-                # Reset semua state saat logout
                 st.session_state['profile_pic_preview'] = None
                 st.session_state['search_page'] = 1
                 st.session_state['search_term'] = ""
                 st.session_state['location_filter'] = "Semua"
                 st.rerun()
 
-            # Panggil halaman dari file lain
             if st.session_state['current_page'] == 'Home': 
                 home_page()
             elif st.session_state['current_page'] == 'SearchJobs': 
-                # Meneruskan fungsi get_jobs dan nomor halaman saat ini
                 search_jobs_page(get_jobs, st.session_state['search_page'])
             elif st.session_state['current_page'] == 'Profile': 
                 profile_page()
+            elif st.session_state['current_page'] == 'MapJobs':
+                map(get_jobs)
+            elif st.session_state['current_page'] == 'AIConsult':
+                ai_consultation_page(get_jobs)
     else:
-        # Jika belum login, tampilkan halaman autentikasi
         auth_page()
 
 if __name__ == '__main__':
